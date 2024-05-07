@@ -1,0 +1,75 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"isBackground": true,
+			"problemMatcher": [
+				{
+					"owner": "quarkus",
+					"fileLocation": [
+						"relative",
+						"${workspaceFolder}/src/main/resources/templates"
+					],
+					"pattern": [
+						{
+							"regexp": "\\[(\\d+)\\]\\s(.*):(\\d+):(\\d+)\\s\\-\\s{(.*)}:\\s(.*)$",
+							"file": 2,
+							"line": 3,
+							"column": 4,
+							"message": 6
+						}
+					],
+					"background": {
+						"activeOnStart": true,
+						"beginsPattern": "^.*Scanning for projects...",
+						"endsPattern": "(^.*Quarkus .* started in .*\\.)|(^.* ERROR .* Failed to start)"
+					}
+				}
+			],
+			"group": "build",
+			"label": "quarkus:dev (smallschool)",
+			"command": "./mvnw quarkus:dev ",
+			"windows": {
+				"command": ".\\mvnw.cmd quarkus:dev "
+			},
+			"options": {
+				"cwd": "smallschool"
+			}
+		},
+		{
+			"type": "shell",
+			"isBackground": true,
+			"problemMatcher": [
+				{
+					"owner": "quarkus",
+					"fileLocation": [
+						"relative",
+						"${workspaceFolder}/src/main/resources/templates"
+					],
+					"pattern": [
+						{
+							"regexp": "\\[(\\d+)\\]\\s(.*):(\\d+):(\\d+)\\s\\-\\s{(.*)}:\\s(.*)$",
+							"file": 2,
+							"line": 3,
+							"column": 4,
+							"message": 6
+						}
+					],
+					"background": {
+						"activeOnStart": true
+					}
+				}
+			],
+			"group": "build",
+			"label": "package -Pnative (smallschool)",
+			"command": "./mvnw package -Pnative ",
+			"windows": {
+				"command": ".\\mvnw.cmd package -Pnative "
+			},
+			"options": {
+				"cwd": "smallschool"
+			}
+		}
+	]
+}

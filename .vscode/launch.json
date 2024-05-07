@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "preLaunchTask": "quarkus:dev (smallschool)",
+            "type": "java",
+            "request": "attach",
+            "hostName": "localhost",
+            "name": "Debug Quarkus application (smallschool)",
+            "port": 5005
+        }
+    ]
+}
