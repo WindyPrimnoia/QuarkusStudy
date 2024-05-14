@@ -1,7 +1,10 @@
 package wp.myschool.dto;
 
+import lombok.Data;
+
+@Data
 public class Pagination {
-    public Object content;
-    public Integer currentPage;
-    public Integer totalPage;
+    private Object content;
+    private Integer currentPage;
+    private Integer totalPage;
 }

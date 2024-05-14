@@ -19,8 +19,9 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import wp.myschool.dto.Pagination;
-import wp.myschool.dto.Response;
+import wp.myschool.dto.MyResponse;
 import wp.myschool.dto.ResponseStatus;
 import wp.myschool.entity.Gender;
 import wp.myschool.entity.Student;
@@ -33,27 +34,30 @@ public class StudentResource {
     @POST
     @Transactional
     public Response newStudent(
-        @QueryParam("name") String newStudentName,
-        @QueryParam("dob") LocalDate dob,
-        @QueryParam("gender") Gender gender,
-        @QueryParam("phoneNumber") String phoneNumber
+        Student newStudent
     ){
-        Response response = new Response();
+        MyResponse response = new MyResponse();
         try {
             Student studentEntity = new Student();
-            studentEntity.name = newStudentName;
-            studentEntity.dob = dob;
-            studentEntity.gender = gender;
-            studentEntity.phoneNumber = phoneNumber;
+            studentEntity.name = newStudent.name;
+            studentEntity.dob = newStudent.dob;
+            studentEntity.gender = newStudent.gender;
+            studentEntity.phoneNumber = newStudent.phoneNumber;
             studentEntity.persist();
-            response.data = studentEntity;
-            response.status = ResponseStatus.SUCCESS;
-            response.httpCode = 200;
+            response.setData(studentEntity); 
+            response.setDefaultSuccess();
         } catch (Exception e) {
             e.printStackTrace();
-            response.status = ResponseStatus.ERROR;
+            response.setDefaultError();
+            return Response
+                .status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(response)
+                .build();
         }
-        return response;
+        return Response
+            .status(Response.Status.OK)
+            .entity(response)
+            .build();
 
     }
 
@@ -61,98 +65,147 @@ public class StudentResource {
     @PUT
     @Transactional
     public Response editStudent(
-        @QueryParam("id") String studentId,
-        @QueryParam("name") String newStudentName,
-        @QueryParam("dob") LocalDate dob,
-        @QueryParam("gender") Gender gender,
-        @QueryParam("phoneNumber") String phoneNumber
+        Student newStudent
     ){        
-        Response response = new Response();
-        Student studentEntity = Student.findById(studentId);
+        MyResponse response = new MyResponse();
+        Student studentEntity = Student.findById(newStudent.id);
         if(Objects.isNull(studentEntity)) {
-            response.message.add("Student not found");
-            response.status = ResponseStatus.ERROR;
-            return response;
+            response.getMessage().add("Student not found");
+            response.setDefaultFailedNotFound();
+            return Response
+                .status(Response.Status.NOT_FOUND)
+                .entity(response)
+                .build();
         }
         
-        if(Objects.nonNull(newStudentName)){
-            studentEntity.name = newStudentName;
+        if(Objects.nonNull(newStudent.name)){
+            studentEntity.name = newStudent.name;
         }
-        if(Objects.nonNull(dob)){
-            studentEntity.dob = dob;
+        if(Objects.nonNull(newStudent.dob)){
+            studentEntity.dob = newStudent.dob;
         }
-        if(Objects.nonNull(gender)){
-            studentEntity.gender = gender;
+        if(Objects.nonNull(newStudent.gender)){
+            studentEntity.gender = newStudent.gender;
         } 
-        if(Objects.nonNull(phoneNumber)){
-            studentEntity.phoneNumber = phoneNumber;
+        if(Objects.nonNull(newStudent.phoneNumber)){
+            studentEntity.phoneNumber = newStudent.phoneNumber;
         }        
         studentEntity.persist();
-        response.data = studentEntity;
-        response.status = ResponseStatus.SUCCESS;
-        return response;
+        response.setData(studentEntity);
+        response.setDefaultSuccess();
+        return Response
+            .status(Response.Status.OK)
+            .entity(response)
+            .build();
     }
 
     @DELETE
     @Transactional
     public Response deleteStudent(@QueryParam("id") String id){
-        Response response = new Response();        
+        MyResponse response = new MyResponse();        
         Student student = Student.findById(id);
         try {
-            if(student.isPersistent()){
-                student.delete();
-                response.status = ResponseStatus.SUCCESS;
-                response.httpCode = 200;
+            if (Objects.isNull(student) || student.isPersistent() == false) {
+                response.setStatus(ResponseStatus.FAILED);
+                response.setHttpCode(404);
+                response.getMessage().add("Error deleting id:" + id + ". non persistent or not exist");
+                return Response
+                    .status(Response.Status.NOT_FOUND)
+                    .entity(response)
+                    .build();
             } else {
-                response.status = ResponseStatus.FAILED;
-                response.httpCode = 400;
-                response.message.add("Error deleting id:" + id + ". non persistent or not exist");
-            }
+                student.delete();
+                response.setDefaultSuccess();
+                return Response
+                .status(Response.Status.OK)
+                .entity(response)
+                .build();
+            } 
         } catch (Exception e) {
             e.printStackTrace();
-            response.httpCode = 500;
-            response.status = ResponseStatus.ERROR;
+            response.setDefaultError();
+            return Response
+                .status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(response)
+                .build();
         }
-        return response;
     }
 
     @GET
     @Path("all")
-    public Response listAllStudents(@DefaultValue("1") @QueryParam("page") Integer searchPage) {
-        Response response = new Response();
+    public Response listAllStudents(@DefaultValue("1") @QueryParam("page") Integer page) {
+        MyResponse response = new MyResponse();
         PanacheQuery<Student> studentEntities = Student.findAll(Sort.by("id").ascending());
-        List<Student> paginatedStudentList = studentEntities.page(Page.of(searchPage - 1, 5)).list();
-
+        List<Student> paginatedStudentList = studentEntities.page(Page.of(page - 1, 5)).list();
+        
         Pagination paging = new Pagination();
-        paging.content = paginatedStudentList;
-        paging.currentPage  = searchPage;
-        paging.totalPage = studentEntities.pageCount();
+        paging.setContent(paginatedStudentList);
+        paging.setCurrentPage(page); 
+        paging.setTotalPage(studentEntities.pageCount());
 
-        response.data = paging;
-        response.status = ResponseStatus.SUCCESS;
-        response.httpCode = 200;
-        return response;
+        response.setData(paging);
+        response.setDefaultSuccess();
+        return Response
+            .status(Response.Status.OK)
+            .entity(response)
+            .build();
     }
     
     @GET
     @Path("search")
     public Response searchStudentByName(
-        @QueryParam("name") String searchQuery,
-        @QueryParam("page") Integer searchPage
+        @DefaultValue("") @QueryParam("name") String searchQuery,
+        @DefaultValue("1") @QueryParam("page") Integer page
     ) {
         PanacheQuery<Student> studentEntities = Student.find("lower(name) LIKE concat('%', ?1, '%')", searchQuery);
-        List<Student> paginatedStudentList = studentEntities.page(Page.of(searchPage - 1, 5)).list();
+        List<Student> paginatedStudentList = studentEntities.page(Page.of(page - 1, 5)).list();
         
         Pagination paging = new Pagination();
-        paging.currentPage  = searchPage;
-        paging.totalPage = studentEntities.pageCount();
-        paging.content = paginatedStudentList;
+        paging.setCurrentPage(page);
+        paging.setTotalPage(studentEntities.pageCount());
+        paging.setContent(paginatedStudentList);
 
-        Response response = new Response();
-        response.data = paging;
-        response.status = ResponseStatus.SUCCESS;
-        response.httpCode = 200;
-        return response;
+        MyResponse response = new MyResponse();
+        response.setData(paging);
+        response.setDefaultSuccess();
+        return Response
+            .status(Response.Status.OK)
+            .entity(response)
+            .build();
+    }
+
+    @GET
+    public Response searchStudentById(
+        @QueryParam("id") Long id
+    ) {
+        MyResponse response = new MyResponse();        
+        Student student = Student.findById(id);
+        try {
+            if (Objects.isNull(student) || student.isPersistent() == false) {
+                response.setStatus(ResponseStatus.FAILED);
+                response.setHttpCode(404);
+                response.getMessage().add("Error finding student with id:" + id + ". non persistent or not exist");
+                return Response
+                    .status(Response.Status.NOT_FOUND)
+                    .entity(response)
+                    .build();
+            } else {
+                response.setData(student);
+                response.setDefaultSuccess();
+                return Response
+                    .status(Response.Status.OK)
+                    .entity(response)
+                    .build();
+            } 
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setDefaultError();
+            return Response
+                .status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(response)
+                .build();
+        }
+
     }
 
 
